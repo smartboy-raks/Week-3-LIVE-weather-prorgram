@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkyPulse Weather AI</title>
+    <style>
+      :root {
+        --bg1: #07111f;
+        --bg2: #14253d;
+        --bg3: #2f4f7d;
+        --panel: rgba(255, 255, 255, 0.12);
+        --panel-strong: rgba(10, 16, 28, 0.78);
+        --text: #f7fbff;
+        --muted: #b8c8db;
+        --accent: #7ee7ff;
+        --accent-2: #b8ff8f;
+        --accent-3: #ffb36e;
+        --border: rgba(255, 255, 255, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at top left, #2e4f7f, transparent 25%), linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+        overflow-x: hidden;
+      }
+
+      body::before, body::after {
+        content: "";
+        position: fixed;
+        width: 22rem;
+        height: 22rem;
+        border-radius: 50%;
+        filter: blur(70px);
+        opacity: 0.35;
+        pointer-events: none;
+        animation: drift 14s ease-in-out infinite;
+      }
+      body::before { top: -4rem; right: -3rem; background: #6ee7ff; }
+      body::after { bottom: -5rem; left: -4rem; background: #96ff97; animation-delay: -7s; }
+
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      .hero-card, .panel, .chat-card {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 12px 34px rgba(0,0,0,0.24);
+      }
+
+      .hero-card {
+        padding: 24px;
+        border-radius: 24px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.16);
+        color: var(--accent);
+        font-size: 0.83rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1, h2 { margin: 0; }
+      h1 { font-size: clamp(1.8rem, 3vw, 2.7rem); line-height: 1.08; }
+      .hero p { color: var(--muted); line-height: 1.6; }
+
+      .search-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      input, button {
+        font: inherit;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+      }
+
+      input {
+        flex: 1 1 260px;
+        min-width: 220px;
+        padding: 13px 14px;
+        color: var(--text);
+        background: rgba(3, 9, 17, 0.7);
+      }
+
+      button {
+        padding: 12px 16px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #062031;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .16s ease, box-shadow .16s ease;
+      }
+
+      button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+      button.secondary { background: rgba(255,255,255,0.16); color: var(--text); }
+
+      .status-card {
+        padding: 22px;
+        border-radius: 24px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+
+      .weather-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .big-temp { font-size: 3.2rem; font-weight: 800; }
+      .mini-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+      .mini-stats div { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 14px; }
+      .mini-stats .label { font-size: 0.76rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em; }
+      .mini-stats .value { font-weight: 700; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 20px;
+      }
+
+      .panel, .chat-card {
+        padding: 20px;
+        border-radius: 24px;
+      }
+
+      .panel h2, .chat-card h2 { margin-bottom: 12px; }
+      .panel p { color: var(--muted); line-height: 1.65; }
+      .insight { margin-top: 12px; padding: 12px; border-radius: 16px; background: rgba(126,231,255,0.14); border: 1px solid rgba(126,231,255,0.26); }
+      .insight strong { color: var(--accent); }
+
+      .chat-log {
+        min-height: 280px;
+        max-height: 360px;
+        overflow-y: auto;
+        padding: 10px;
+        border-radius: 18px;
+        background: rgba(3, 9, 17, 0.58);
+        border: 1px solid rgba(255,255,255,0.14);
+      }
+      .bubble {
+        margin-bottom: 10px;
+        padding: 11px 12px;
+        border-radius: 14px;
+        line-height: 1.55;
+        animation: pop .25s ease;
+      }
+      .bubble.user { background: rgba(126,231,255,0.2); border: 1px solid rgba(126,231,255,0.32); }
+      .bubble.ai { background: rgba(184,255,143,0.14); border: 1px solid rgba(184,255,143,0.32); }
+      .bubble .who { font-size: 0.77rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .07em; }
+
+      .footer-note { margin-top: 8px; color: var(--muted); font-size: 0.92rem; }
+
+      @keyframes drift {
+        0%, 100% { transform: translate3d(0,0,0) scale(1); }
+        50% { transform: translate3d(18px,-16px,0) scale(1.06); }
+      }
+      @keyframes pop { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+
+      @media (max-width: 860px) {
+        .hero, .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <div class="hero-card">
+          <span class="badge">Live weather • AI insights</span>
+          <h1>Meet your colorful weather guide.</h1>
+          <p>Search any city or country and get real-time weather details plus an AI-powered explanation that feels smart, fun, and easy to understand.</p>
+          <div class="search-bar">
+            <input id="locationInput" type="text" placeholder="Try: London, UK or Nairobi" />
+            <button id="searchBtn">Explore Weather</button>
+            <button id="geoBtn" class="secondary">Use My Location</button>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div id="statusText">Loading weather from the skies…</div>
+          <div class="weather-main">
+            <div>
+              <div id="tempValue" class="big-temp">--</div>
+              <div id="conditionValue">Waiting for data</div>
+            </div>
+            <div id="locationValue">—</div>
+          </div>
+          <div class="mini-stats">
+            <div><div class="label">Humidity</div><div id="humidityValue" class="value">--</div></div>
+            <div><div class="label">Wind</div><div id="windValue" class="value">--</div></div>
+            <div><div class="label">Rain</div><div id="rainValue" class="value">--</div></div>
+            <div><div class="label">Feels Like</div><div id="feelsLikeValue" class="value">--</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>AI Weather Summary</h2>
+          <p id="aiSummary">Your AI weather companion will appear here after a search.</p>
+          <div class="insight">
+            <strong>Smart tip:</strong> Ask questions like “Will it rain later?” or “Is it good for a walk?” and the AI will respond with a lively explanation.
+          </div>
+        </article>
+
+        <article class="chat-card">
+          <h2>Ask the Weather AI</h2>
+          <div id="chatLog" class="chat-log"></div>
+          <div class="search-bar" style="margin-top: 12px;">
+            <input id="chatInput" type="text" placeholder="Ask something fun or helpful..." />
+            <button id="chatBtn">Send</button>
+          </div>
+          <p class="footer-note">Powered by your classroom proxy endpoint and live weather data.</p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const weatherCodeMap = {
+        0: "Clear sky",
+        1: "Mostly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Rime fog",
+        51: "Light drizzle",
+        53: "Drizzle",
+        55: "Heavy drizzle",
+        61: "Light rain",
+        63: "Rain",
+        65: "Heavy rain",
+        66: "Freezing rain",
+        67: "Heavy freezing rain",
+        71: "Light snow",
+        73: "Snow",
+        75: "Heavy snow",
+        80: "Rain showers",
+        81: "Strong showers",
+        82: "Violent showers",
+        95: "Thunderstorms",
+        96: "Thunderstorms with hail",
+        99: "Severe thunderstorm"
+      };
+
+      const state = {
+        place: null,
+        weather: null
+      };
+
+      const els = {
+        locationInput: document.getElementById("locationInput"),
+        searchBtn: document.getElementById("searchBtn"),
+        geoBtn: document.getElementById("geoBtn"),
+        statusText: document.getElementById("statusText"),
+        tempValue: document.getElementById("tempValue"),
+        conditionValue: document.getElementById("conditionValue"),
+        locationValue: document.getElementById("locationValue"),
+        humidityValue: document.getElementById("humidityValue"),
+        windValue: document.getElementById("windValue"),
+        rainValue: document.getElementById("rainValue"),
+        feelsLikeValue: document.getElementById("feelsLikeValue"),
+        aiSummary: document.getElementById("aiSummary"),
+        chatLog: document.getElementById("chatLog"),
+        chatInput: document.getElementById("chatInput"),
+        chatBtn: document.getElementById("chatBtn")
+      };
+
+      function setStatus(message) {
+        els.statusText.textContent = message;
+      }
+
+      function renderWeather(weather, place) {
+        state.weather = weather;
+        state.place = place;
+
+        const current = weather.current;
+        const description = weatherCodeMap[current.weathercode] || "Changing skies";
+
+        els.locationValue.textContent = `${place.name}, ${place.country}`;
+        els.tempValue.textContent = `${Math.round(current.temperature_2m)}°C`;
+        els.conditionValue.textContent = description;
+        els.humidityValue.textContent = `${Math.round(current.relative_humidity_2m)}%`;
+        els.windValue.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+        els.rainValue.textContent = `${current.rain.toFixed(1)} mm`;
+        els.feelsLikeValue.textContent = `${Math.round(current.apparent_temperature)}°C`;
+      }
+
+      function appendBubble(text, who) {
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${who === "You" ? "user" : "ai"}`;
+        bubble.innerHTML = `<div class="who">${who}</div>${text}`;
+        els.chatLog.appendChild(bubble);
+        els.chatLog.scrollTop = els.chatLog.scrollHeight;
+      }
+
+      async function askProxy(prompt) {
+        // This is the main AI request. It sends your message to the classroom proxy server
+        // using a standard fetch POST request and JSON data.
+        const response = await fetch("https://vibe-proxy-gqv4.onrender.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer sk-vibe-summer-2026"
+          },
+          body: JSON.stringify({
+            model: "class-chat-model",
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Proxy request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        // The proxy returns the answer in a typical OpenAI-style format.
+        // We read the content from data.choices[0].message.content.
+        return data?.choices?.[0]?.message?.content || "The AI did not return any text.";
+      }
+
+      async function buildAiSummary(userQuestion = "Give me a lively weather summary.") {
+        if (!state.weather || !state.place) {
+          return "Search for a location first so I can build a weather-based AI response.";
+        }
+
+        const current = state.weather.current;
+        const description = weatherCodeMap[current.weathercode] || "Changing skies";
+        const prompt = `You are a cheerful weather guide. The user asked: "${userQuestion}". The live weather for ${state.place.name}, ${state.place.country} is ${description}, ${Math.round(current.temperature_2m)}°C, feels like ${Math.round(current.apparent_temperature)}°C, humidity ${Math.round(current.relative_humidity_2m)}%, wind ${Math.round(current.wind_speed_10m)} km/h, and rain ${current.rain.toFixed(1)} mm. Please answer in a friendly, vivid, and helpful way with one short prediction and one practical tip.`;
+
+        return askProxy(prompt);
+      }
+
+      async function fetchWeather(locationText) {
+        setStatus("Fetching weather…");
+        try {
+          // Step 1: Turn the city or country name into coordinates.
+          const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationText)}&count=1&language=en&format=json`);
+          if (!geoRes.ok) throw new Error("Location lookup failed.");
+          const geoData = await geoRes.json();
+          if (!geoData.results?.length) throw new Error("No matching place found.");
+
+          const place = geoData.results[0];
+
+          // Step 2: Use the coordinates to request detailed weather data.
+          const url = new URL("https://api.open-meteo.com/v1/forecast");
+          url.searchParams.set("latitude", place.latitude);
+          url.searchParams.set("longitude", place.longitude);
+          url.searchParams.set("current", "temperature_2m,apparent_temperature,weathercode,relative_humidity_2m,wind_speed_10m,rain");
+          url.searchParams.set("timezone", "auto");
+
+          const weatherRes = await fetch(url);
+          if (!weatherRes.ok) throw new Error("Weather request failed.");
+          const weather = await weatherRes.json();
+          renderWeather(weather, place);
+          setStatus(`Live weather loaded for ${place.name}`);
+
+          // Step 3: Ask the AI for a colorful explanation using the fresh weather data.
+          const aiReply = await buildAiSummary(`Give me a vivid weather summary for ${place.name}.`);
+          els.aiSummary.textContent = aiReply;
+          appendBubble(`Weather loaded for ${place.name}.`, "SkyPulse");
+          appendBubble(aiReply, "SkyPulse");
+        } catch (error) {
+          setStatus("Something went wrong.");
+          els.aiSummary.textContent = error.message;
+          appendBubble(`Oops: ${error.message}`, "SkyPulse");
+        }
+      }
+
+      function requestUserLocation() {
+        if (!navigator.geolocation) {
+          els.aiSummary.textContent = "Geolocation is not supported in this browser.";
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setStatus("Using your current coordinates…");
+          try {
+            const url = new URL("https://geocoding-api.open-meteo.com/v1/reverse");
+            url.searchParams.set("latitude", lat);
+            url.searchParams.set("longitude", lon);
+            url.searchParams.set("language", "en");
+            url.searchParams.set("format", "json");
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Reverse geocoding failed.");
+            const data = await res.json();
+            const place = data.results?.[0] || { name: "Your area", country: "Current location" };
+            await fetchWeather(`${place.name}, ${place.country}`);
+          } catch (error) {
+            els.aiSummary.textContent = error.message;
+          }
+        }, () => {
+          els.aiSummary.textContent = "Location permission was denied. You can still search for a city manually.";
+        });
+      }
+
+      document.getElementById("searchBtn").addEventListener("click", () => {
+        const q = els.locationInput.value.trim();
+        if (!q) return;
+        fetchWeather(q);
+      });
+
+      document.getElementById("geoBtn").addEventListener("click", requestUserLocation);
+
+      els.locationInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("searchBtn").click();
+        }
+      });
+
+      document.getElementById("chatBtn").addEventListener("click", async () => {
+        const question = els.chatInput.value.trim();
+        if (!question) return;
+        appendBubble(question, "You");
+        els.chatInput.value = "";
+
+        try {
+          const reply = await buildAiSummary(question);
+          appendBubble(reply, "SkyPulse");
+          els.aiSummary.textContent = reply;
+        } catch (error) {
+          appendBubble(`AI error: ${error.message}`, "SkyPulse");
+        }
+      });
+
+      els.chatInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("chatBtn").click();
+        }
+      });
+
+      // Start with a friendly default city so the app feels alive immediately.
+      fetchWeather("London");
+    </script>
+  </body>
+</html>
