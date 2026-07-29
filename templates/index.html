@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Weather Chatbot</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ── LEFT PANEL: Weather ── -->
+    <aside class="weather-panel" id="weatherPanel">
+      <h1 class="app-title">🌤 Live Weather Chatbot</h1>
+
+      <!-- City search -->
+      <form id="cityForm" class="city-form">
+        <input
+          type="text"
+          id="cityInput"
+          class="city-input"
+          placeholder="Enter city name…"
+          value="{{ default_city }}"
+          required
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+
+      <!-- Weather card (hidden until data loads) -->
+      <div id="weatherCard" class="weather-card hidden">
+        <div class="weather-header">
+          <img id="weatherIcon" src="" alt="weather icon" class="weather-icon" />
+          <div>
+            <h2 id="cityName" class="city-name"></h2>
+            <p id="weatherDesc" class="weather-desc"></p>
+          </div>
+        </div>
+        <div class="weather-stats">
+          <div class="stat">
+            <span class="stat-label">🌡 Temperature</span>
+            <span id="statTemp" class="stat-value"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">🤔 Feels Like</span>
+            <span id="statFeels" class="stat-value"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">💧 Humidity</span>
+            <span id="statHumidity" class="stat-value"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">💨 Wind</span>
+            <span id="statWind" class="stat-value"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">☁ Cloud Cover</span>
+            <span id="statClouds" class="stat-value"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">🌡 Min / Max</span>
+            <span id="statMinMax" class="stat-value"></span>
+          </div>
+        </div>
+        <button id="refreshBtn" class="btn btn-secondary refresh-btn">
+          ⟳ Refresh weather
+        </button>
+      </div>
+
+      <!-- Error / status messages -->
+      <p id="weatherError" class="error-msg hidden"></p>
+    </aside>
+
+    <!-- ── RIGHT PANEL: Chat ── -->
+    <main class="chat-panel">
+      <div id="chatMessages" class="chat-messages">
+        <div class="message assistant">
+          <div class="bubble">
+            👋 Hello! Search for a city on the left to load live weather data,
+            then ask me anything about the conditions or forecast.
+          </div>
+        </div>
+      </div>
+
+      <form id="chatForm" class="chat-form">
+        <textarea
+          id="chatInput"
+          class="chat-input"
+          placeholder="Ask about the weather…"
+          rows="1"
+          disabled
+        ></textarea>
+        <button type="submit" id="sendBtn" class="btn btn-primary" disabled>
+          Send
+        </button>
+      </form>
+    </main>
+
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    const weatherCard   = document.getElementById('weatherCard');
+    const weatherError  = document.getElementById('weatherError');
+    const cityInput     = document.getElementById('cityInput');
+    const chatMessages  = document.getElementById('chatMessages');
+    const chatInput     = document.getElementById('chatInput');
+    const sendBtn       = document.getElementById('sendBtn');
+
+    function showError(msg) {
+      weatherError.textContent = msg;
+      weatherError.classList.remove('hidden');
+    }
+    function clearError() {
+      weatherError.textContent = '';
+      weatherError.classList.add('hidden');
+    }
+
+    function addMessage(role, text) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `message ${role}`;
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+      wrapper.appendChild(bubble);
+      chatMessages.appendChild(wrapper);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addTypingIndicator() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message assistant typing-wrapper';
+      wrapper.id = 'typingIndicator';
+      wrapper.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
+      chatMessages.appendChild(wrapper);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return wrapper;
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    function renderWeather(data) {
+      document.getElementById('weatherIcon').src =
+        `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+      document.getElementById('cityName').textContent =
+        `${data.city}, ${data.country}`;
+      document.getElementById('weatherDesc').textContent = data.description;
+      document.getElementById('statTemp').textContent =
+        `${data.temperature_c.toFixed(1)} °C`;
+      document.getElementById('statFeels').textContent =
+        `${data.feels_like_c.toFixed(1)} °C`;
+      document.getElementById('statHumidity').textContent =
+        `${data.humidity_pct}%`;
+      document.getElementById('statWind').textContent =
+        `${data.wind_speed_mps} m/s`;
+      document.getElementById('statClouds').textContent =
+        `${data.clouds_pct}%`;
+      document.getElementById('statMinMax').textContent =
+        `${data.temp_min_c.toFixed(1)} / ${data.temp_max_c.toFixed(1)} °C`;
+      weatherCard.classList.remove('hidden');
+      clearError();
+    }
+
+    function enableChat() {
+      chatInput.disabled = false;
+      sendBtn.disabled   = false;
+      chatInput.focus();
+    }
+
+    // ── City search ──────────────────────────────────────────────────────────
+
+    document.getElementById('cityForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const city = cityInput.value.trim();
+      if (!city) return;
+      clearError();
+      weatherCard.classList.add('hidden');
+
+      try {
+        const res  = await fetch('/api/weather', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ city }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Unknown error'); return; }
+        renderWeather(data);
+        enableChat();
+        // Clear previous chat and welcome user with weather summary
+        chatMessages.innerHTML = '';
+        addMessage('assistant',
+          `Weather loaded for ${data.city}, ${data.country}! ` +
+          `It's currently ${data.temperature_c.toFixed(1)} °C with ${data.description.toLowerCase()}. ` +
+          `Ask me anything about the current conditions or what to expect next!`
+        );
+      } catch (err) {
+        showError('Could not connect to server. Is it running?');
+      }
+    });
+
+    // ── Refresh button ───────────────────────────────────────────────────────
+
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      try {
+        const res  = await fetch('/api/refresh', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Refresh failed'); return; }
+        renderWeather(data);
+        addMessage('assistant', `✅ Weather data refreshed for ${data.city}. Ask me anything!`);
+      } catch (err) {
+        showError('Could not refresh weather data.');
+      }
+    });
+
+    // ── Chat submission ──────────────────────────────────────────────────────
+
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      addMessage('user', message);
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+      chatInput.disabled = true;
+
+      const typing = addTypingIndicator();
+
+      try {
+        const res  = await fetch('/api/chat', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ message }),
+        });
+        const data = await res.json();
+        removeTypingIndicator();
+        if (!res.ok) {
+          addMessage('assistant', `⚠️ ${data.error || 'Something went wrong.'}`);
+        } else {
+          addMessage('assistant', data.reply);
+        }
+      } catch (err) {
+        removeTypingIndicator();
+        addMessage('assistant', '⚠️ Could not reach the server. Please try again.');
+      } finally {
+        sendBtn.disabled   = false;
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
+    });
+
+    // Auto-resize textarea as user types
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    });
+
+    // Allow Shift+Enter for new lines; plain Enter submits
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chatForm').requestSubmit();
+      }
+    });
+  </script>
+</body>
+</html>
