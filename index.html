@@ -6,16 +6,16 @@
     <title>SkyPulse Weather AI</title>
     <style>
       :root {
-        --bg1: #07111f;
-        --bg2: #14253d;
-        --bg3: #2f4f7d;
+        --bg1: #1f1207;
+        --bg2: #44210d;
+        --bg3: #9b4f12;
         --panel: rgba(255, 255, 255, 0.12);
-        --panel-strong: rgba(10, 16, 28, 0.78);
-        --text: #f7fbff;
-        --muted: #b8c8db;
-        --accent: #7ee7ff;
-        --accent-2: #b8ff8f;
-        --accent-3: #ffb36e;
+        --panel-strong: rgba(12, 10, 8, 0.78);
+        --text: #fff7ef;
+        --muted: #ffd8b2;
+        --accent: #ff9f43;
+        --accent-2: #ff6b2c;
+        --accent-3: #ffd166;
         --border: rgba(255, 255, 255, 0.16);
       }
 
@@ -25,7 +25,7 @@
         min-height: 100vh;
         font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
         color: var(--text);
-        background: radial-gradient(circle at top left, #2e4f7f, transparent 25%), linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+        background: radial-gradient(circle at top left, #ff8c42, transparent 25%), linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
         overflow-x: hidden;
       }
 
@@ -40,8 +40,8 @@
         pointer-events: none;
         animation: drift 14s ease-in-out infinite;
       }
-      body::before { top: -4rem; right: -3rem; background: #6ee7ff; }
-      body::after { bottom: -5rem; left: -4rem; background: #96ff97; animation-delay: -7s; }
+      body::before { top: -4rem; right: -3rem; background: #ff8f3f; }
+      body::after { bottom: -5rem; left: -4rem; background: #ffbf69; animation-delay: -7s; }
 
       .app {
         max-width: 1200px;
@@ -152,7 +152,7 @@
 
       .panel h2, .chat-card h2 { margin-bottom: 12px; }
       .panel p { color: var(--muted); line-height: 1.65; }
-      .insight { margin-top: 12px; padding: 12px; border-radius: 16px; background: rgba(126,231,255,0.14); border: 1px solid rgba(126,231,255,0.26); }
+      .insight { margin-top: 12px; padding: 12px; border-radius: 16px; background: rgba(255, 159, 67, 0.16); border: 1px solid rgba(255, 159, 67, 0.28); }
       .insight strong { color: var(--accent); }
 
       .chat-log {
@@ -171,8 +171,8 @@
         line-height: 1.55;
         animation: pop .25s ease;
       }
-      .bubble.user { background: rgba(126,231,255,0.2); border: 1px solid rgba(126,231,255,0.32); }
-      .bubble.ai { background: rgba(184,255,143,0.14); border: 1px solid rgba(184,255,143,0.32); }
+      .bubble.user { background: rgba(255, 159, 67, 0.2); border: 1px solid rgba(255, 159, 67, 0.32); }
+      .bubble.ai { background: rgba(255, 191, 105, 0.15); border: 1px solid rgba(255, 191, 105, 0.34); }
       .bubble .who { font-size: 0.77rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .07em; }
 
       .footer-note { margin-top: 8px; color: var(--muted); font-size: 0.92rem; }
