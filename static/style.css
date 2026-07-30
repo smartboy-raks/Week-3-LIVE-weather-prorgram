@@ -2,18 +2,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #0f1117;
-  --surface:     #1a1d27;
-  --surface2:    #22263a;
-  --accent:      #4f8ef7;
-  --accent-dark: #3a6fd8;
-  --text:        #e8eaf0;
-  --text-muted:  #8b90a8;
-  --success:     #34d399;
-  --error:       #f87171;
+  --bg:          #e8f4fd;
+  --surface:     #ffffff;
+  --surface2:    #d0e8f8;
+  --accent:      #0077cc;
+  --accent-dark: #005fa3;
+  --text:        #1a2b3c;
+  --text-muted:  #5a7a96;
+  --success:     #059669;
+  --error:       #dc2626;
   --radius:      12px;
   --radius-sm:   8px;
-  --shadow:      0 4px 24px rgba(0,0,0,0.45);
+  --shadow:      0 4px 24px rgba(0,100,180,0.12);
 }
 
 html, body {
@@ -152,8 +152,8 @@ html, body {
 .error-msg {
   color: var(--error);
   font-size: 0.88rem;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
 }
